@@ -27,6 +27,8 @@ namespace HashTablePersistence
         protected BinaryWriter binaryWriter;
         protected bool compressFlag;
         protected string path;
+        protected bool TimeModuleFlag;
+        protected bool RealTimeSavingFlag; // 2 features to be inplemented
 
         public void SetPath(string newPath)
         {
