@@ -13,17 +13,25 @@ namespace HashTablePersistence
     {
         static void Main(string[] args)
         {
+            Hashtable hashtable = new Hashtable();
+            hashtable.Add("ha", "ha");
+            PersistenceHelper helper = new PersistenceHelper(hashtable, "table");
+            helper.Write();
         }
     }
 
     class PersistenceHelper
     {
-        private Hashtable hashtable;
-        private bool compressFlag;
-        public PersistenceHelper(Hashtable table)
+        protected Hashtable hashtable;
+        protected BinaryReader binaryReader;
+        protected BinaryWriter binaryWriter;
+        protected bool compressFlag;
+        protected string fileName;
+        public PersistenceHelper(Hashtable table, string fileName)
         {
-            hashtable = table;
-            compressFlag = true;
+            this.hashtable = table;
+            this.compressFlag = true;
+            this.fileName = fileName;
         }
         
         public void EnableCompress()
@@ -79,6 +87,45 @@ namespace HashTablePersistence
             byte[] inputBytes = Convert.FromBase64String(inputString);
             byte[] outputBytes = DecompressBase(inputBytes);
             return Encoding.Default.GetString(outputBytes);
+        }
+
+        protected static void CreateDirectory(string directoryPath)
+        {            
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
+
+        public void Write()
+        {
+            CreateDirectory(".\\data");
+            try
+            {
+                binaryWriter = new BinaryWriter(new FileStream(@".\data\" + fileName, FileMode.OpenOrCreate));
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine("Err" + e.Message);
+                binaryWriter.Close();
+                return;
+            }
+            binaryWriter.Write("MEGUMI");
+            binaryWriter.Write(hashtable.Count);
+            binaryWriter.Write(compressFlag);
+            string Key, Value;
+            foreach (DictionaryEntry itr in hashtable)
+            {
+                Key = (string)itr.Key;
+                Value = (string)itr.Value;
+                binaryWriter.Write(Key);
+                if (compressFlag)
+                {
+                    Value = Compress(Value);
+                }
+                binaryWriter.Write(Value);
+            }
+            binaryWriter.Close();
         }
     }
 }
