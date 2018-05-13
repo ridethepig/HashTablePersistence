@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define Debug
+using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
@@ -15,23 +16,36 @@ namespace HashTablePersistence
         {
             Hashtable hashtable = new Hashtable();
             hashtable.Add("ha", "ha");
-            PersistenceHelper helper = new PersistenceHelper(hashtable, "table");
-            helper.Write();
+            PersistenceHelper helper = new PersistenceHelper("table");
+            helper.Write(hashtable,"haha");
         }
     }
 
     class PersistenceHelper
-    {
-        protected Hashtable hashtable;
+    {        
         protected BinaryReader binaryReader;
         protected BinaryWriter binaryWriter;
         protected bool compressFlag;
-        protected string fileName;
-        public PersistenceHelper(Hashtable table, string fileName)
+        protected string path;
+
+        public void SetPath(string newPath)
         {
-            this.hashtable = table;
+            if (newPath[newPath.Length - 1] != '\\')
+            {
+#if Debug
+                throw new Exception("Err \'cause your path is ileagal; there should be a \\ at the end of it");
+#else
+                Console.WriteLine("Err \'cause your path is ileagal; there should be a \\ at the end of it");
+                return;
+#endif
+            }
+            path = newPath;
+        }
+
+        public PersistenceHelper(string fileName)
+        {     
             this.compressFlag = true;
-            this.fileName = fileName;
+            path = @".\data\";
         }
         
         public void EnableCompress()
@@ -97,18 +111,22 @@ namespace HashTablePersistence
             }
         }
 
-        public void Write()
+        public void Write(Hashtable hashtable, string fileName)
         {
-            CreateDirectory(".\\data");
+            CreateDirectory(path);
             try
             {
-                binaryWriter = new BinaryWriter(new FileStream(@".\data\" + fileName, FileMode.OpenOrCreate));
+                binaryWriter = new BinaryWriter(new FileStream(path + fileName, FileMode.OpenOrCreate));
             }
             catch (IOException e)
             {
-                Console.WriteLine("Err" + e.Message);
+#if Debug
+                throw e;
+#else
+                Console.WriteLine("Err:" + e.Message);
                 binaryWriter.Close();
                 return;
+#endif            
             }
             binaryWriter.Write("MEGUMI");
             binaryWriter.Write(hashtable.Count);
@@ -126,6 +144,54 @@ namespace HashTablePersistence
                 binaryWriter.Write(Value);
             }
             binaryWriter.Close();
+            binaryWriter = null;
+        }        
+
+        public void Read(ref Hashtable hashtable, string fileName)
+        {
+            if (!File.Exists(path + fileName))
+            {
+#if Debug               
+                throw new Exception("No such File:" + path + fileName);
+#else
+                Console.WriteLine("No such File:{0}", path + fileName);
+                return;
+#endif            
+            }
+            try
+            {
+                binaryReader = new BinaryReader(new FileStream(path + fileName, FileMode.Open));
+            }
+            catch (IOException e)
+            {
+#if Debug
+                throw e;
+#else
+                Console.WriteLine("Err:" + e.Message);
+                binaryreader.Close();
+                return;
+#endif
+            }
+            string sign = binaryReader.ReadString();
+            if (sign != "MEGUMI")
+            {
+                throw new Exception("not my wife");
+            }
+            int tableSize = binaryReader.ReadInt32();
+            bool compressflg = binaryReader.ReadBoolean();
+            string key, value;
+            for (int i = 1;i <= tableSize; ++ i)
+            {
+                key = binaryReader.ReadString();
+                value = binaryReader.ReadString();
+                if (compressflg)
+                {
+                    value = Decompress(value);
+                }
+                hashtable.Add(key, value);
+            }
+            binaryReader.Close();
+            binaryReader = null;
         }
     }
 }
